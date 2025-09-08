@@ -7,8 +7,8 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
-
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { interval, Observable } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -18,6 +18,21 @@ import { toObservable } from '@angular/core/rxjs-interop';
 export class AppComponet implements OnInit {
   clickCount = signal(0);
   clickCount$ = toObservable(this.clickCount);
+  interval$ = interval(1000);
+  intervalSignal = toSignal(this.interval$, { initialValue: 0 });
+  customInterval$ = new Observable((subscriber) => {
+    let timeExcutes = 0;
+    const interval = setInterval(() => {
+      if (timeExcutes > 3) {
+        clearInterval(interval);
+        subscriber.complete();
+        return;
+      }
+      console.log('Emitting New Value...');
+      subscriber.next({ message: 'New Value' });
+      timeExcutes++;
+    }, 2000);
+  });
   // interval = signal(0);
   // doubleInterval = computed(() => this.interval() * 2);
   private destroyRef = inject(DestroyRef);
@@ -38,12 +53,16 @@ export class AppComponet implements OnInit {
     // this.destroyRef.onDestroy(() => {
     //   sub.unsubscribe();
     // });
-   const subscription = this.clickCount$.subscribe({
+    this.customInterval$.subscribe({
+      next: (val) => console.log(val),
+      complete: () => console.log('Completed'),
+    });
+    const subscription = this.clickCount$.subscribe({
       next: (val) => console.log(`Clicked Button ${this.clickCount()} times.`),
     });
     this.destroyRef.onDestroy(() => {
       subscription.unsubscribe();
-    })
+    });
   }
   onClick() {
     this.clickCount.update((prevClick) => prevClick + 1);
